@@ -1,0 +1,54 @@
+{
+  "manifest_version": 3,
+  "name": "Libby Download",
+  "version": "0.6.0",
+  "description": "Downloads Audiobooks for transfer to unsupported devices",
+  "minimum_chrome_version": "116",
+  "icons": {
+    "48": "icons/libby-download-48.png"
+  },
+  "permissions": [
+    "activeTab",
+    "downloads",
+    "offscreen",
+    "storage",
+    "tabs"
+  ],
+  "host_permissions": [
+    "https://*.libbyapp.com/*",
+    "https://*.overdrive.com/*"
+  ],
+  "background": {
+    "service_worker": "background.js"
+  },
+  "action": {
+    "default_icon": "icons/libby-download-48.png",
+    "default_title": "Libby Download",
+    "default_popup": "popup.html"
+  },
+  "content_scripts": [
+    {
+      "matches": [
+        "https://*.libbyapp.com/*",
+        "https://*.overdrive.com/*"
+      ],
+      "js": [
+        "interceptor.js"
+      ],
+      "run_at": "document_start",
+      "all_frames": true,
+      "world": "MAIN"
+    },
+    {
+      "matches": [
+        "https://*.libbyapp.com/*",
+        "https://*.overdrive.com/*"
+      ],
+      "js": [
+        "bridge.js"
+      ],
+      "run_at": "document_start",
+      "all_frames": true
+    }
+  ]
+}

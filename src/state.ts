@@ -1,4 +1,5 @@
 import { Task } from "./common";
+import { storageGet, storageSet } from "./browser";
 
 /**
  * Chapter metadata
@@ -74,7 +75,7 @@ export class ParsedPartPath {
 export async function addTask(task: Task): Promise<string> {
   const tasks = await fetchTasks();
   tasks.unshift(task);
-  await browser.storage.local.set({ "tasks": tasks });
+  await storageSet({ "tasks": tasks });
   return task.id;
 }
 
@@ -91,14 +92,14 @@ export async function updateTask(id: string, state: string) {
       task.state = state;
     }
   }
-  await browser.storage.local.set({ "tasks": tasks });
+  await storageSet({ "tasks": tasks });
 }
 
 /**
  * Fetch active tasks
  */
 async function fetchTasks(): Promise<Array<Task>> {
-  const storageResponse = await browser.storage.local.get("tasks");
+  const storageResponse = await storageGet("tasks");
   if (storageResponse.tasks) {
     return storageResponse.tasks;
   } else {

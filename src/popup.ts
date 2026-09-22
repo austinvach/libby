@@ -1,11 +1,12 @@
 import { Task,  handleResponse, Command } from "./common";
+import { api } from "./browser";
 
 /**
  * Listen for start or clear tasks clicks
  */
 function listenForClicks() {
   document.querySelector("#start-download-btn").addEventListener("click", () => {
-    browser.runtime.sendMessage(new Command("start", {
+    api.runtime.sendMessage(new Command("start", {
       // @ts-ignore
       "merge": document.querySelector("#mergeFiles").checked,
       // @ts-ignore
@@ -14,19 +15,19 @@ function listenForClicks() {
       .then(handleResponse, console.error);
   });
   document.querySelector("#clear-tasks").addEventListener("click", () => {
-    browser.storage.local.set({ "tasks": [] }).catch(console.error);
+    api.storage.local.set({ "tasks": [] }).catch(console.error);
   });
   document.querySelector("#mergeFiles").addEventListener("click", (event) => {
     // @ts-ignore
     console.log(`Setting merge state to ${event.target.checked}`);
     // @ts-ignore
-    browser.storage.local.set({ "merge": event.target.checked }).catch(console.error);
+    api.storage.local.set({ "merge": event.target.checked }).catch(console.error);
   });
   document.querySelector("#decodeDuration").addEventListener("click", (event) => {
     // @ts-ignore
     console.log(`Setting decode state to ${event.target.checked}`);
     // @ts-ignore
-    browser.storage.local.set({ "decode": event.target.checked }).catch(console.error);
+    api.storage.local.set({ "decode": event.target.checked }).catch(console.error);
   });
 }
 
@@ -77,7 +78,7 @@ function reloadTasks(tasks: Array<Task>) {
 }
 
 async function loadMergeState() {
-  const mergeResponse = await browser.storage.local.get("merge");
+  const mergeResponse = await api.storage.local.get("merge");
   const checkbox = document.querySelector("#mergeFiles");
   if (mergeResponse["merge"] != undefined) {
     // @ts-ignore
@@ -89,7 +90,7 @@ async function loadMergeState() {
 }
 
 async function loadDecodeState() {
-  const response = await browser.storage.local.get("decode");
+  const response = await api.storage.local.get("decode");
   const checkbox = document.querySelector("#decodeDuration");
   if (response["decode"] != undefined) {
     // @ts-ignore
@@ -102,12 +103,12 @@ async function loadDecodeState() {
 
 
 // If the active tab is Libby, display pop-up content and listen for clicks
-browser.tabs.query({ currentWindow: true, active: true }).then(async (tabs) => {
+api.tabs.query({ currentWindow: true, active: true }).then(async (tabs) => {
   if (tabs[0].url.startsWith("https://libbyapp.com/open/loan/")) {
     await loadMergeState();
     await loadDecodeState();
     let tasks: Array<Task>;
-    const storageResponse = await browser.storage.local.get("tasks");
+    const storageResponse = await api.storage.local.get("tasks");
     if (storageResponse["tasks"]) {
       tasks = storageResponse["tasks"];
     } else {
@@ -117,7 +118,7 @@ browser.tabs.query({ currentWindow: true, active: true }).then(async (tabs) => {
     reloadTasks(tasks);
 
     // Add a listener to local storage on task changes
-    browser.storage.local.onChanged.addListener((changes) => {
+    api.storage.local.onChanged.addListener((changes) => {
       if (changes["tasks"]) {
         reloadTasks(changes["tasks"].newValue);
       }
