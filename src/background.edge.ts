@@ -41,18 +41,32 @@ api.runtime.onMessage.addListener((message: any, sender: any, sendResponse: (res
       closeOffscreenDocument().catch(console.error);
       return false;
     case STORAGE_GET:
-      api.storage.local.get(message.args.key).then(sendResponse, console.error);
+      api.storage.local.get(message.args.key).then(sendResponse, respondWithError(sendResponse));
       return true;
     case STORAGE_SET:
-      api.storage.local.set(message.args.items).then(() => sendResponse({}), console.error);
+      api.storage.local
+        .set(message.args.items)
+        .then(() => sendResponse({}), respondWithError(sendResponse));
       return true;
     case DOWNLOAD:
-      api.downloads.download(message.args).then(() => sendResponse({}), console.error);
+      api.downloads.download(message.args).then(() => sendResponse({}), respondWithError(sendResponse));
       return true;
     default:
       return false;
   }
 });
+
+/**
+ * Build a rejection handler which settles a proxied call with an error
+ *
+ * @param sendResponse Response callback of the message listener
+ */
+function respondWithError(sendResponse: (response?: any) => void) {
+  return (error: Error) => {
+    console.error(error);
+    sendResponse({ error: `${error}` });
+  };
+}
 
 /**
  * Handle the start command from the popup
@@ -159,7 +173,12 @@ async function closeOffscreenDocument() {
   if (api.offscreen.hasDocument && !(await api.offscreen.hasDocument())) {
     return;
   }
-  await api.offscreen.closeDocument();
+  try {
+    await api.offscreen.closeDocument();
+  } catch (e) {
+    // there was no document to close
+    console.log(`${e}`);
+  }
 }
 
 function handleError(error: Error) {
