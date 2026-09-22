@@ -38,7 +38,14 @@ export const DOWNLOAD = "download";
  * @param message Message to send
  */
 export function sendMessage(message: any): Promise<any> {
-  return Promise.resolve(api.runtime.sendMessage(message)).catch(() => undefined);
+  return Promise.resolve(api.runtime.sendMessage(message)).catch((error: Error) => {
+    // no listener is registered in the receiving context, which is expected
+    // for broadcast style messages
+    if (!`${error}`.includes("Receiving end does not exist")) {
+      console.error(error);
+    }
+    return undefined;
+  });
 }
 
 function hasStorage(): boolean {

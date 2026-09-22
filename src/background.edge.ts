@@ -72,10 +72,11 @@ async function start(command: Command) {
   const reloadTask = await addTask(new Task("", "Reloading Tab", "Running"));
   const tabs = await api.tabs.query({ currentWindow: true, active: true });
   const tab = tabs[0];
-  if (tab && tab.url) {
-    const path = tab.url.split("/");
-    state.id = path[path.length - 1];
+  if (tab == undefined || tab.url == undefined) {
+    throw new Error("No active tab to download from");
   }
+  const path = tab.url.split("/");
+  state.id = path[path.length - 1];
   console.log(`Reloading current tab for loan ${state.id}`);
   await api.tabs.reload(tab.id);
   await updateTask(reloadTask, "Completed");

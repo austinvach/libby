@@ -20,7 +20,10 @@ api.runtime.onMessage.addListener((message: any) => {
 });
 
 /**
- * Restore a load state that was serialized over the messaging API
+ * Restore a load state that was serialized over the messaging API.
+ *
+ * Only the `expires` date needs reviving, the nested title and chapter objects
+ * are plain data and are used as such by the processors.
  *
  * @param serialized Serialized load state
  */

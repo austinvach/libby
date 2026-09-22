@@ -12,7 +12,7 @@
  */
 export function isTrackedUrl(url: string): boolean {
   try {
-    const parsed = new URL(url, "https://libbyapp.com");
+    const parsed = new URL(url);
     return (
       parsed.pathname.endsWith("/sync") ||
       parsed.pathname.includes("/media/") ||

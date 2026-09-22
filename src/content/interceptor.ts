@@ -9,11 +9,19 @@ import { BODY_MESSAGE } from "./protocol";
  * `fetch` and `XMLHttpRequest` in the page itself. Captured bodies are posted
  * to the isolated world bridge which forwards them to the service worker.
  */
+function absolute(url: string): string {
+  try {
+    return new URL(url, window.location.href).href;
+  } catch (e) {
+    return "";
+  }
+}
+
 function postBody(url: string, body: string): void {
   if (!url || !body) {
     return;
   }
-  window.postMessage({ source: BODY_MESSAGE, url: new URL(url, window.location.href).href, body }, "*");
+  window.postMessage({ source: BODY_MESSAGE, url, body }, "*");
 }
 
 function wrapFetch(): void {
@@ -23,7 +31,7 @@ function wrapFetch(): void {
     const response = await originalFetch.apply(this, args);
     try {
       const input = args[0];
-      const url = response.url || (typeof input === "string" ? input : input?.url);
+      const url = absolute(response.url || (typeof input === "string" ? input : input?.url));
       if (url && isTrackedUrl(url)) {
         response
           .clone()
@@ -42,12 +50,11 @@ function wrapXhr(): void {
   const originalOpen = XMLHttpRequest.prototype.open;
   // @ts-ignore variadic passthrough to the original implementation
   XMLHttpRequest.prototype.open = function (method: string, url: string, ...rest: any[]) {
-    // @ts-ignore stash the url so it can be read when the request completes
-    this.__libbyUrl = url;
+    const requestUrl = absolute(url);
     this.addEventListener("load", () => {
       try {
-        if (isTrackedUrl(url) && typeof this.responseText === "string") {
-          postBody(url, this.responseText);
+        if (isTrackedUrl(requestUrl) && typeof this.responseText === "string") {
+          postBody(requestUrl, this.responseText);
         }
       } catch (e) {
         // responseText throws for non text response types, ignore
@@ -66,7 +73,7 @@ function reportBookData(attempt = 0): void {
   // @ts-ignore page global set by the Libby reader
   const bData = window.bData;
   if (bData) {
-    postBody(window.location.href, `window.bData = ${JSON.stringify(bData)};`);
+    postBody(absolute(window.location.href), `window.bData = ${JSON.stringify(bData)};`);
   } else if (attempt < 60) {
     setTimeout(() => reportBookData(attempt + 1), 500);
   }
