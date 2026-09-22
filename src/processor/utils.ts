@@ -1,5 +1,6 @@
 import { Task } from "../common";
 import { addTask, Chapter, LoadState, ParsedPartPath, updateTask } from "../state";
+import { download } from "../browser";
 
 /**
  * MP3 metadata that should be added to the file
@@ -187,7 +188,7 @@ export async function downloadZip(zip: any, title: string, expiration: Date) {
   const processTask = await addTask(new Task(zipName, "Downloading Zip", "Running"));
   const archive = await zip.generateAsync({ type: "blob" });
   const archiveUrl = URL.createObjectURL(archive);
-  await browser.downloads.download({
+  await download({
     "filename": zipName,
     url: archiveUrl
   });

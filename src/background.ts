@@ -1,8 +1,8 @@
 import { Command, Task } from "./common";
-import { addTask, LoadState, Title, updateTask } from "./state";
+import { addTask, LoadState, updateTask } from "./state";
 import { mp3WithCUE } from "./processor/mp3-with-cue";
 import { mp3Parts } from "./processor/mp3-parts";
-import { parseToc } from "./processor/utils";
+import { parseMedia, parseSync, parseTitle } from "./handlers";
 
 let stateTask: string;
 let stateCheckCounter = 1;
@@ -62,12 +62,7 @@ function handleSync(details: { url?: string | URL; method?: string; requestId?: 
   const filter = browser.webRequest.filterResponseData(details.requestId);
   bufferJSONBody(filter, (body) => {
     try {
-      const syncState = JSON.parse(body);
-      for (const i in syncState.loans) {
-        if (syncState.loans[i].id === state.id) {
-          state.expires = new Date(syncState.loans[i].expires);
-        }
-      }
+      parseSync(state, body);
       runIfLoaded();
     } catch (e) {
       handleError(e);
@@ -84,30 +79,12 @@ function handleMedia(details: { url?: string | URL; method?: string; requestId?:
   const filter = browser.webRequest.filterResponseData(details.requestId);
   bufferJSONBody(filter, (body) => {
     try {
-      const bookMedia = JSON.parse(body);
-      if (bookMedia.covers["cover300Wide"]) {
-        state.cover_href = bookMedia.covers["cover300Wide"].href;
-      } else if (bookMedia.covers["cover150Wide"]) {
-        state.cover_href = bookMedia.covers["cover150Wide"].href;
-      } else if (bookMedia.covers["cover510Wide"]) {
-        state.cover_href = bookMedia.covers["cover510Wide"].href;
-      }
+      parseMedia(state, body);
       runIfLoaded();
     } catch (e) {
       handleError(e);
     }
   });
-}
-
-function extractBookJson(rsp: str): any {
-  // find the line with "window.bData" and match json string within
-  const regex = /window\.bData\s*=\s*({.*});/g;
-  const match = regex.exec(rsp);
-  if (!match) {
-    return null;
-  }
-  const json = match[1];
-  return JSON.parse(json);
 }
 
 /**
@@ -119,41 +96,7 @@ function handleTitle(details: { url?: string | URL; method?: string; requestId?:
   const filter = browser.webRequest.filterResponseData(details.requestId);
   bufferJSONBody(filter, async (body) => {
     try {
-      const responseJson = extractBookJson(body);
-      console.log(`Got response ${JSON.stringify(responseJson)}`);
-      const title = responseJson.title;
-      state.title = new Title(title.main, title.subtitle, title.collection ?? "");
-
-      const authors = [];
-      const narrators = [];
-      for (const i in responseJson.creator) {
-        const creator = responseJson.creator[i];
-        if (creator.role === "author") {
-          authors.push(creator.name);
-        } else if (creator.role === "narrator") {
-          narrators.push(creator.name);
-        }
-      }
-
-      state.authors = authors;
-      state.narrators = narrators;
-
-      if (responseJson.short) {
-        state.description = responseJson.description.short;
-      } else if (responseJson.description.full) {
-        state.description = responseJson.description.full;
-      }
-
-      const url = new URL(details.url);
-      const spine = new Map();
-      for (const i in responseJson.spine) {
-        spine.set(
-          responseJson.spine[i]["-odread-original-path"],
-          `${url.protocol}//${url.host}/${responseJson.spine[i].path}`
-        );
-      }
-
-      state.chapters = parseToc(spine, responseJson.nav.toc);
+      parseTitle(state, `${details.url}`, body);
       console.log(`Parsed table of contents ${JSON.stringify(state.chapters)}`);
     } catch (e) {
       handleError(e);
